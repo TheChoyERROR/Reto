@@ -1,9 +1,9 @@
 package com.example.demo.domain.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 public class Categoria {
@@ -14,6 +14,11 @@ public class Categoria {
     
     private String nombre, descripcion;
 
+    // Relación OneToMany con SubCategoria
+    @OneToMany(mappedBy = "categoria", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<SubCategoria> subCategorias = new ArrayList<>();
+
     public Categoria() {
     }
 
@@ -21,6 +26,7 @@ public class Categoria {
         this.nombre = nombre;
     }
 
+    // Getters, setters y métodos de ayuda
     public Long getId() {
         return id;
     }
@@ -40,8 +46,26 @@ public class Categoria {
     public String getDescripcion() {
         return descripcion;
     }
-    
+
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+    
+    public List<SubCategoria> getSubCategorias() {
+        return subCategorias;
+    }
+    
+    public void setSubCategorias(List<SubCategoria> subCategorias) {
+        this.subCategorias = subCategorias;
+    }
+    
+    public void addSubCategoria(SubCategoria subCategoria) {
+        subCategorias.add(subCategoria);
+        subCategoria.setCategoria(this);
+    }
+    
+    public void removeSubCategoria(SubCategoria subCategoria) {
+        subCategorias.remove(subCategoria);
+        subCategoria.setCategoria(null);
     }
 }
