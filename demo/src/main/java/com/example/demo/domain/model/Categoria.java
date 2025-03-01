@@ -14,10 +14,10 @@ public class Categoria {
     
     private String nombre, descripcion;
 
-    // Relación OneToMany con SubCategoria
-    @OneToMany(mappedBy = "categoria", cascade = CascadeType.ALL, orphanRemoval = true)
+    // Relación con Productos
+    @OneToMany(mappedBy = "categoria", cascade = CascadeType.ALL)
     @JsonManagedReference
-    private List<SubCategoria> subCategorias = new ArrayList<>();
+    private List<Producto> productos = new ArrayList<>();
 
     public Categoria() {
     }
@@ -26,7 +26,7 @@ public class Categoria {
         this.nombre = nombre;
     }
 
-    // Getters, setters y métodos de ayuda
+    // Getters y setters
     public Long getId() {
         return id;
     }
@@ -51,21 +51,21 @@ public class Categoria {
         this.descripcion = descripcion;
     }
     
-    public List<SubCategoria> getSubCategorias() {
-        return subCategorias;
+    public List<Producto> getProductos() {
+        return productos;
     }
     
-    public void setSubCategorias(List<SubCategoria> subCategorias) {
-        this.subCategorias = subCategorias;
+    public void setProductos(List<Producto> productos) {
+        this.productos = productos;
     }
     
-    public void addSubCategoria(SubCategoria subCategoria) {
-        subCategorias.add(subCategoria);
-        subCategoria.setCategoria(this);
+    public void addProducto(Producto producto) {
+        productos.add(producto);
+        producto.setCategoria(this);
     }
     
-    public void removeSubCategoria(SubCategoria subCategoria) {
-        subCategorias.remove(subCategoria);
-        subCategoria.setCategoria(null);
+    public void removeProducto(Producto producto) {
+        productos.remove(producto);
+        producto.setCategoria(null);
     }
 }
