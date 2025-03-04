@@ -1,22 +1,88 @@
-# Maven
-# Build your Java project and run tests with Apache Maven.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/java
-
 trigger:
 - main
 
-pool:
-  name: Azure Pipelines
+stages:
+# ------------------- STAGE 1: Build -------------------
+- stage: Build
+  displayName: "Build Stage"
+  jobs:
+  - job: BuildJob
+    displayName: "Build Job"
+    pool:
+      name: Default
+    steps:
+    # 1. Checkout del repositorio
+    - checkout: self
+      displayName: "Checkout del repositorio"
 
-steps:
-- task: Maven@3
-  inputs:
-    mavenPomFile: 'pom.xml'
-    mavenOptions: '-Xmx3072m'
-    javaHomeOption: 'JDKVersion'
-    jdkVersionOption: '1.11'
-    jdkArchitectureOption: 'x64'
-    publishJUnitResults: true
-    testResultsFiles: '**/surefire-reports/TEST-*.xml'
-    goals: 'package'
+    # 2. Verificar instalación de Java y Maven
+    - script: |
+        @echo off
+        echo Verificando instalación de Java:
+        for /f "delims=" %%i in ('java -version 2^>^&1') do echo %%i
+
+        echo.
+        echo Verificando instalación de Maven:
+        for /f "delims=" %%j in ('mvn -version 2^>^&1') do echo %%j
+      displayName: "Verificar instalación de Java y Maven"
+
+    # 3. Agregar Maven al PATH (opcional)
+    - script: |
+        echo ##vso[task.setvariable variable=PATH]D:\AzureAgent\apache-maven-3.9.9\bin;%PATH%
+      displayName: "Agregar Maven al PATH"
+
+    # 4. Compilar y empaquetar el proyecto con Maven
+    - task: Maven@4
+      displayName: "Ejecutar Maven Package"
+      inputs:
+        mavenPomFile: 'demo/pom.xml'
+        goals: 'clean package'
+        mavenOptions: '-Xmx3072m'
+        javaHomeOption: 'Path'
+        jdkDirectory: 'C:\Program Files\Eclipse Adoptium\jdk-21.0.6.7-hotspot'
+        jdkArchitectureOption: 'x64'
+        publishJUnitResults: true
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+
+    # 5. Publicar artefactos (publica solo el .jar generado)
+    - task: PublishBuildArtifacts@1
+      displayName: "Publicar Artefactos"
+      inputs:
+        PathtoPublish: 'demo/target/demo-0.0.1-SNAPSHOT.jar'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+# ------------------- STAGE 2: Deploy -------------------
+- stage: Deploy
+  displayName: "Deploy Stage"
+  dependsOn: Build
+  jobs:
+  - job: DeployJob
+    displayName: "Deploy Job"
+    pool:
+      vmImage: "ubuntu-latest"  # Puedes usar un agente hospedado de Microsoft para esta etapa
+    steps:
+    # 1. Descargar artefactos publicados en la etapa Build
+    - task: DownloadBuildArtifacts@0
+      displayName: "Descargar Artefactos"
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'drop'
+        downloadPath: '$(Pipeline.Workspace)/drop'
+
+    # 2. Debug: Listar el contenido de la carpeta donde se descargaron los artefactos
+    - script: |
+        echo "Contenido de la carpeta drop:"
+        ls -R $(Pipeline.Workspace)/drop
+      displayName: "Debug - Mostrar contenido de drop"
+
+    # 3. Desplegar el .jar en Azure Web App (ajustamos la ruta del paquete)
+    - task: AzureWebApp@1
+      displayName: "Desplegar en Azure Web App"
+      inputs:
+        azureSubscription: 'MiServicioAzure'   # Tu Service Connection
+        appName: 'TestAzureSpring'              # Nombre exacto de tu Azure Web App
+        package: '$(Pipeline.Workspace)/drop/drop/demo-0.0.1-SNAPSHOT.jar'
+        runtimeStack: 'JAVA|17-java17'
+        enableCustomDeployment: true
